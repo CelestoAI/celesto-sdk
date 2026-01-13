@@ -10,7 +10,7 @@ from dotenv.main import DotEnv
 from rich.console import Console
 from typing_extensions import Annotated
 
-from celesto.sdk.client import CelestoSDK
+from .sdk.client import CelestoSDK
 
 console = Console()
 
