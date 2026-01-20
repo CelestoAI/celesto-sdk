@@ -241,7 +241,8 @@ class Deployment(_BaseClient):
             folder=Path("./my-agent"),
             name="my-agent",
             description="My AI assistant",
-            envs={"OPENAI_API_KEY": "sk-..."}
+            envs={"OPENAI_API_KEY": "sk-..."},
+            project_name="My Project"
         )
         print(f"Deployment ID: {result['id']}")
 
@@ -249,8 +250,60 @@ class Deployment(_BaseClient):
         deployments = client.deployment.list()
     """
 
+    def _resolve_project_id(self, project_name: str) -> str:
+        """Resolve a project ID from a project name."""
+        skip = 0
+        limit = 100
+        while True:
+            response = self._request(
+                "GET",
+                "/projects",
+                params={"skip": skip, "limit": limit},
+            )
+            projects = response.get("data") or []
+            for project in projects:
+                if project.get("name") == project_name:
+                    project_id = project.get("id")
+                    if not project_id:
+                        raise CelestoValidationError(
+                            f"Project '{project_name}' missing id in response."
+                        )
+                    return project_id
+            total = response.get("total")
+            if total is None:
+                break
+            skip += limit
+            if skip >= total:
+                break
+
+        raise CelestoValidationError(f"Project '{project_name}' not found.")
+
+    def _resolve_first_project_id(self) -> str:
+        """Resolve the first available project ID."""
+        response = self._request(
+            "GET",
+            "/projects",
+            params={"skip": 0, "limit": 1},
+        )
+        projects = response.get("data") or []
+        if not projects:
+            raise CelestoValidationError(
+                "No projects found. Create a project or specify project_name."
+            )
+        project_id = projects[0].get("id")
+        if not project_id:
+            raise CelestoValidationError(
+                "First project missing id in response."
+            )
+        return project_id
+
     def _create_deployment(
-        self, bundle: Path, name: str, description: str, envs: dict[str, str]
+        self,
+        bundle: Path,
+        name: str,
+        description: str,
+        envs: dict[str, str],
+        project_id: str,
     ) -> dict:
         """Internal method to upload and create a deployment."""
         if bundle.exists() and not bundle.is_file():
@@ -263,6 +316,7 @@ class Deployment(_BaseClient):
         form_data = {
             "name": name,
             "description": description,
+            "project_id": project_id,
             "config": json.dumps(config),
         }
 
@@ -277,6 +331,7 @@ class Deployment(_BaseClient):
         name: str,
         description: Optional[str] = None,
         envs: Optional[dict[str, str]] = None,
+        project_name: Optional[str] = None,
     ) -> dict:
         """Deploy an agent from a local folder.
 
@@ -289,6 +344,7 @@ class Deployment(_BaseClient):
             name: Unique name for the deployment
             description: Human-readable description (optional)
             envs: Environment variables to inject (optional)
+            project_name: Project name to scope the deployment (optional; defaults to first project)
 
         Returns:
             Deployment result with 'id', 'status', and other metadata
@@ -301,7 +357,8 @@ class Deployment(_BaseClient):
                 folder=Path("./my-agent"),
                 name="weather-bot",
                 description="A bot that provides weather information",
-                envs={"API_KEY": "secret123"}
+                envs={"API_KEY": "secret123"},
+                project_name="My Project"
             )
             print(f"Status: {result['status']}")  # "READY" or "BUILDING"
         """
@@ -309,6 +366,12 @@ class Deployment(_BaseClient):
             raise CelestoValidationError(f"Folder {folder} does not exist")
         if not folder.is_dir():
             raise CelestoValidationError(f"Folder {folder} is not a directory")
+
+        resolved_project_name = project_name or os.environ.get("CELESTO_PROJECT_NAME")
+        if resolved_project_name:
+            resolved_project_id = self._resolve_project_id(resolved_project_name)
+        else:
+            resolved_project_id = self._resolve_first_project_id()
 
         # Create tar.gz archive (Nixpacks expects tar.gz format)
         with tempfile.NamedTemporaryFile(delete=False, suffix=".tar.gz") as temp_file:
@@ -318,7 +381,9 @@ class Deployment(_BaseClient):
             bundle = Path(temp_file.name)
 
         try:
-            return self._create_deployment(bundle, name, description, envs)
+            return self._create_deployment(
+                bundle, name, description, envs, resolved_project_id
+            )
         finally:
             bundle.unlink()
 
@@ -657,7 +722,8 @@ class CelestoSDK(_BaseConnection):
             # Deploy an agent
             result = client.deployment.deploy(
                 folder=Path("./my-app"),
-                name="My App"
+                name="My App",
+                project_name="My Project"
             )
 
             # Manage delegated access

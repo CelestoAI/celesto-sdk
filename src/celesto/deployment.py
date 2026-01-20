@@ -107,6 +107,12 @@ def deploy(
         "-e",
         help='Environment variables as comma-separated key=value pairs (e.g., "API_KEY=xyz,DEBUG=true")',
     ),
+    project_name: Optional[str] = typer.Option(
+        None,
+        "--project",
+        "-p",
+        help="Celesto project name (optional; defaults to first project)",
+    ),
     api_key: Optional[str] = typer.Option(
         None,
         "--api-key",
@@ -126,6 +132,8 @@ def deploy(
     """
     # Get API key
     final_api_key = _get_api_key(api_key, ignore_env_file, "CELESTO_API_KEY")
+
+    resolved_project_name = project_name or os.environ.get("CELESTO_PROJECT_NAME")
 
     # Validate folder path
     folder_path = Path(folder).resolve()
@@ -151,7 +159,11 @@ def deploy(
 
         client = CelestoSDK(final_api_key)
         result = client.deployment.deploy(
-            folder=folder_path, name=name, description=description, envs=env_dict
+            folder=folder_path,
+            name=name,
+            description=description,
+            envs=env_dict,
+            project_name=resolved_project_name,
         )
         console.print("✅ [bold green]Deployment successful![/bold green]")
 

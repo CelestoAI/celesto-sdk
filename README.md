@@ -14,12 +14,13 @@ Set your API key in the environment:
 
 ```bash
 export CELESTO_API_KEY="your-key"
+export CELESTO_PROJECT_NAME="your-project-name"
 ```
 
 ## CLI
 
 ```bash
-celesto deploy
+celesto deploy --project "My Project"
 celesto ls
 celesto a2a get-card --agent http://localhost:8000
 ```
