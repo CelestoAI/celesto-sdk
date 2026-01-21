@@ -474,11 +474,11 @@ with CelestoSDK() as client:
 
 - **API Documentation**: https://docs.celesto.ai/celesto-sdk
 - **Platform Guide**: https://celesto.ai/docs
-- **Repository**: https://github.com/CelestoAI/celesto-sdk
+- **Repository**: https://github.com/CelestoAI/sdk
 
 ## Support
 
-- **Issues & Bugs**: [GitHub Issues](https://github.com/CelestoAI/celesto-sdk/issues)
+- **Issues & Bugs**: [GitHub Issues](https://github.com/CelestoAI/sdk/issues)
 - **Questions**: Create a discussion on GitHub
 - **Email**: support@celesto.ai
 

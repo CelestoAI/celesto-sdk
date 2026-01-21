@@ -8,6 +8,45 @@ description = "Python SDK and CLI for the Celesto AI platform."
 dynamic = ["version"]
 readme = "README.md"
 requires-python = ">=3.10"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [
+    { name="Aniket Maurya", email="aniket@celesto.ai" }
+]
+maintainers = [
+    { name="Aniket Maurya", email="aniket@celesto.ai" }
+]
+keywords = [
+    "celesto",
+    "ai",
+    "agents",
+    "sdk",
+    "api",
+    "deployment",
+    "oauth",
+    "gatekeeper",
+    "google-drive",
+    "delegated-access",
+    "ai-platform",
+    "agent-deployment",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Typing :: Typed",
+]
 dependencies = [
     "a2a-sdk>=0.3.10",
     "fastmcp>=2.7.1",
@@ -17,19 +56,14 @@ dependencies = [
     "typer>=0.20.0",
     "typing-extensions>=4.10.0",
 ]
-license-files = ["LICENSE"]
-authors = [
-    { name="Aniket Maurya", email="aniket@celesto.ai" }
-]
-keywords = ["Celesto", "SDK", "API", "Agents"]
-classifiers = [
-    "Development Status :: 4 - Beta",
-    "Intended Audience :: Developers",
-    "License :: OSI Approved :: Apache Software License",
-]
-homepage = "https://celesto.ai"
-repository = "https://github.com/CelestoAI/celesto-sdk"
-documentation = "https://docs.celesto.ai/celesto-sdk"
+
+[project.urls]
+Homepage = "https://celesto.ai"
+Documentation = "https://docs.celesto.ai/celesto-sdk"
+Repository = "https://github.com/CelestoAI/sdk"
+"Source Code" = "https://github.com/CelestoAI/sdk"
+"Issue Tracker" = "https://github.com/CelestoAI/sdk/issues"
+Changelog = "https://github.com/CelestoAI/sdk/releases"
 
 [project.scripts]
 celesto = "celesto:app"
