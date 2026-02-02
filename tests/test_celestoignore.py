@@ -1,5 +1,6 @@
 """Tests for .celestoignore file handling during deployment."""
 
+import os
 import tarfile
 import tempfile
 from pathlib import Path
@@ -13,8 +14,7 @@ class MockConnection(_BaseConnection):
     """Mock connection for testing without requiring API key."""
 
     def __init__(self):
-        self.base_url = "http://test"
-        self.api_key = "test"
+        super().__init__(api_key="test", base_url="http://test")
         self.session = None
 
 
@@ -114,8 +114,6 @@ def test_files_starting_with_hash_are_included_in_deployment(
         temp_path = Path(temp_file.name)
 
     try:
-        import os
-
         with tarfile.open(temp_path, "w:gz") as tar:
             for root, dirs, files in os.walk(tmp_path):
                 root_path = Path(root)
@@ -236,3 +234,70 @@ def test_inline_comments_are_supported(deployment, tmp_path: Path):
 
     # Files not matching patterns should not be ignored
     assert not ignore_spec.match_file("keep.py"), "keep.py should not be ignored"
+
+
+def test_all_files_ignored_creates_valid_archive(deployment, tmp_path: Path):
+    """Test that ignoring all files creates a valid (but empty) tar archive.
+
+    This verifies graceful handling when .celestoignore patterns match all
+    files in the deployment folder, resulting in an empty archive.
+    """
+    # Create test files
+    (tmp_path / "test.pyc").write_text("compiled")
+    (tmp_path / "test.log").write_text("logs")
+    (tmp_path / ".env").write_text("secrets")
+
+    # Create .celestoignore that ignores everything
+    celestoignore = tmp_path / ".celestoignore"
+    celestoignore.write_text(
+        """# Ignore all files
+*
+"""
+    )
+
+    # Load ignore patterns
+    ignore_spec = deployment._load_ignore_patterns(tmp_path)
+    assert ignore_spec is not None
+
+    # Create tar archive (should be valid but contain no files except .celestoignore)
+    with tempfile.NamedTemporaryFile(suffix=".tar.gz", delete=False) as temp_file:
+        temp_path = Path(temp_file.name)
+
+    try:
+        with tarfile.open(temp_path, "w:gz") as tar:
+            for root, dirs, files in os.walk(tmp_path):
+                root_path = Path(root)
+                rel_root = root_path.relative_to(tmp_path)
+
+                for file in files:
+                    file_path = root_path / file
+                    rel_file = rel_root / file if rel_root != Path(".") else Path(file)
+
+                    # Skip if file matches ignore patterns
+                    if ignore_spec:
+                        file_pattern = str(rel_file).replace("\\", "/")
+                        if ignore_spec.match_file(file_pattern):
+                            continue
+
+                    # Add file to archive
+                    arcname = str(rel_file).replace("\\", "/")
+                    tar.add(file_path, arcname=arcname)
+
+        # Verify the archive is valid and check contents
+        with tarfile.open(temp_path, "r:gz") as tar:
+            members = tar.getnames()
+
+            # The archive should be valid (can be opened)
+            # Note: .celestoignore itself won't be in archive because it's matched by *
+            # In real deployment, this would result in empty or near-empty bundle
+            assert isinstance(
+                members, list
+            ), "Archive should be valid with list of members"
+
+            # Verify that the test files are NOT in the archive
+            assert "test.pyc" not in members, "test.pyc should be ignored"
+            assert "test.log" not in members, "test.log should be ignored"
+            assert ".env" not in members, ".env should be ignored"
+
+    finally:
+        temp_path.unlink()

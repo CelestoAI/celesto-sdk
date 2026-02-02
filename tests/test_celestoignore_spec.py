@@ -20,8 +20,7 @@ class MockConnection(_BaseConnection):
     """Mock connection for testing without requiring API key."""
 
     def __init__(self):
-        self.base_url = "http://test"
-        self.api_key = "test"
+        super().__init__(api_key="test", base_url="http://test")
         self.session = None
 
 
