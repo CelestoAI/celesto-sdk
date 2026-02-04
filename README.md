@@ -148,6 +148,38 @@ print(f"Status: {result['status']}")  # "READY" or "BUILDING"
 - `envs` (dict, optional): Environment variables for your agent
 - `project_name` (str, optional): Project to deploy to (defaults to `CELESTO_PROJECT_NAME` or first project)
 
+**Excluding Files with .celestoignore:**
+
+Create a `.celestoignore` file in your agent folder to exclude files and directories from deployment. The format is identical to `.gitignore`:
+
+```gitignore
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual environments
+venv/
+.venv/
+
+# Environment files
+.env
+.env.local
+
+# Development files
+.vscode/
+.git/
+
+# Dependencies
+node_modules/
+
+# Tests
+tests/
+*.test.py
+```
+
+Files and directories matching these patterns will be automatically excluded from the deployment bundle.
+
 #### List Deployments
 
 ```python

@@ -1,0 +1,76 @@
+# Celesto Agent Deployment - Example .celestoignore
+#
+# This file specifies patterns for files and directories to exclude
+# from deployment. Format is identical to .gitignore.
+#
+# Copy this to .celestoignore in your agent directory and customize.
+#
+# Inline comments (after #) are supported on pattern lines.
+
+# Python
+__pycache__/        # Python bytecode cache directory
+*.py[cod]           # Compiled Python files
+*$py.class
+*.so                # Shared object files
+.Python
+
+# Virtual environments
+venv/               # Virtual environment folders
+.venv/
+env/
+ENV/
+
+# Environment and secrets
+.env                # Environment variables
+.env.*
+*.key               # Private keys
+*.pem               # Certificate files
+secrets/            # Secrets directory
+
+# IDE and editors
+.vscode/            # VSCode settings
+.idea/              # JetBrains IDE settings
+*.swp               # Vim swap files
+*.swo
+*~                  # Backup files
+.DS_Store           # macOS metadata
+
+# Version control
+.git/               # Git repository
+.gitignore          # Git ignore file
+
+# Dependencies
+node_modules/       # Node.js dependencies
+vendor/             # Vendor dependencies
+
+# Build artifacts
+dist/               # Distribution files
+build/              # Build output
+*.egg-info/         # Python package metadata
+
+# Tests
+tests/              # Test directory
+test_*/
+*_test.py           # Test files
+*.test.py
+
+# Documentation (if not needed at runtime)
+docs/               # Documentation directory
+*.md                # Markdown files
+
+# Logs and temporary files
+*.log               # Log files
+logs/               # Logs directory
+tmp/                # Temporary files
+temp/
+*.tmp
+
+# Data files (if large or sensitive)
+data/               # Data directory
+*.csv               # CSV data files
+*.db                # Database files
+*.sqlite
+
+# Configuration (if sensitive)
+config.local.*      # Local configuration overrides
+.env.local

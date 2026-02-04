@@ -1,11 +1,13 @@
 import json
 import os
+import sys
 import tarfile
 import tempfile
 from pathlib import Path
 from typing import Any, List, Literal, Optional
 
 import httpx
+import pathspec
 
 from .exceptions import (
     CelestoAuthenticationError,
@@ -297,6 +299,55 @@ class Deployment(_BaseClient):
             )
         return project_id
 
+    def _load_ignore_patterns(self, folder: Path) -> pathspec.PathSpec | None:
+        """Load ignore patterns from .celestoignore file if it exists.
+
+        Args:
+            folder: The folder to search for .celestoignore
+
+        Returns:
+            PathSpec object if .celestoignore exists, None otherwise
+        """
+        ignore_file = folder / ".celestoignore"
+        if not ignore_file.exists():
+            return None
+
+        try:
+            with open(ignore_file, "r", encoding="utf-8") as f:
+                patterns = f.read().splitlines()
+
+            # Process patterns according to gitignore spec:
+            # 1. Lines starting with # (after whitespace) are comments
+            # 2. Inline comments: # preceded by space (e.g., "pattern # comment")
+            # 3. # without preceding space is literal (e.g., "file#name")
+            processed_patterns = []
+            for line in patterns:
+                # Strip inline comments: only ' #' (space followed by #) starts a comment
+                # Find the first occurrence of ' #' pattern
+                space_hash_idx = line.find(' #')
+                if space_hash_idx >= 0:
+                    # Strip from the space before # onwards
+                    line = line[:space_hash_idx]
+
+                # Strip leading/trailing whitespace
+                line = line.strip()
+
+                # Skip empty lines and full-line comments (lines starting with #)
+                if not line or line.startswith('#'):
+                    continue
+
+                processed_patterns.append(line)
+
+            return pathspec.PathSpec.from_lines("gitignore", processed_patterns)
+        except OSError as e:
+            print(f"Warning: Failed to read .celestoignore file: {e}", file=sys.stderr)
+            print("Continuing deployment without file filtering.", file=sys.stderr)
+            return None
+        except Exception as e:
+            print(f"Warning: Failed to parse .celestoignore patterns: {e}", file=sys.stderr)
+            print("Continuing deployment without file filtering.", file=sys.stderr)
+            return None
+
     def _create_deployment(
         self,
         bundle: Path,
@@ -339,6 +390,10 @@ class Deployment(_BaseClient):
         to Celesto. The folder should contain your agent code and any
         configuration files (e.g., requirements.txt, Dockerfile).
 
+        If a .celestoignore file exists in the folder, files and directories
+        matching the patterns in that file will be excluded from deployment.
+        The format is identical to .gitignore.
+
         Args:
             folder: Path to the folder containing agent code
             name: Unique name for the deployment
@@ -373,11 +428,45 @@ class Deployment(_BaseClient):
         else:
             resolved_project_id = self._resolve_first_project_id()
 
+        # Load ignore patterns from .celestoignore if it exists
+        ignore_spec = self._load_ignore_patterns(folder)
+
         # Create tar.gz archive (Nixpacks expects tar.gz format)
         with tempfile.NamedTemporaryFile(delete=False, suffix=".tar.gz") as temp_file:
             with tarfile.open(temp_file.name, "w:gz") as tar:
-                for item in folder.iterdir():
-                    tar.add(item, arcname=item.name)
+                # Recursively add all files, respecting .celestoignore patterns
+                for root, dirs, files in os.walk(folder):
+                    root_path = Path(root)
+                    rel_root = root_path.relative_to(folder)
+
+                    # Filter directories in-place to avoid descending into ignored dirs
+                    if ignore_spec:
+                        # Check each directory and remove ignored ones
+                        dirs_to_remove = []
+                        for d in dirs:
+                            rel_dir = rel_root / d if rel_root != Path(".") else Path(d)
+                            # PathSpec needs forward slashes and trailing slash for dirs
+                            dir_pattern = str(rel_dir).replace("\\", "/") + "/"
+                            if ignore_spec.match_file(dir_pattern):
+                                dirs_to_remove.append(d)
+                        for d in dirs_to_remove:
+                            dirs.remove(d)
+
+                    # Add files that aren't ignored
+                    for file in files:
+                        file_path = root_path / file
+                        rel_file = rel_root / file if rel_root != Path(".") else Path(file)
+
+                        # Skip if file matches ignore patterns
+                        if ignore_spec:
+                            # PathSpec needs forward slashes
+                            file_pattern = str(rel_file).replace("\\", "/")
+                            if ignore_spec.match_file(file_pattern):
+                                continue
+
+                        # Add file to archive with relative path
+                        arcname = str(rel_file).replace("\\", "/")
+                        tar.add(file_path, arcname=arcname)
             bundle = Path(temp_file.name)
 
         try:
