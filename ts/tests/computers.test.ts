@@ -909,3 +909,19 @@ describe("ComputersClient", () => {
     assert.equal(connection.url, "wss://gateway.example/connect?region=us&token=token");
   });
 });
+
+describe("internet policy", () => {
+  it("sends the off policy and reads it from the response", async () => {
+    const { fetch, calls } = makeFetchMock(() => ({ status: 201, body: { id: "cmp_off", network_policy: { mode: "off" } } }));
+    const client = new ComputersClient(makeConfig(fetch));
+    const info = await client.create({ networkPolicy: { mode: "off" } });
+    assert.deepEqual(calls[0]!.body, { network_policy: { mode: "off" } });
+    assert.deepEqual(info.networkPolicy, { mode: "off" });
+  });
+  it("rejects an external volume with internet off before sending", async () => {
+    const { fetch, calls } = makeFetchMock(() => ({ status: 201, body: {} }));
+    const client = new ComputersClient(makeConfig(fetch));
+    await assert.rejects(client.create({ networkPolicy: { mode: "off" }, persistentHome: true }), /External volumes require internet/);
+    assert.equal(calls.length, 0);
+  });
+});

@@ -474,3 +474,11 @@ def test_delete_prompt_omits_organization_when_unknown(monkeypatch):
     # Never name an organization we could not actually determine.
     assert "unknown" not in result.output
     assert "Delete computer curie?" in result.output
+
+
+def test_computer_create_without_internet(monkeypatch):
+    fake_client = _FakeClient()
+    monkeypatch.setattr(computer, "_get_client", lambda api_key=None: fake_client)
+    result = CliRunner().invoke(computer.app, ["create", "--no-internet", "--json"])
+    assert result.exit_code == 0
+    assert fake_client.computers.calls[0][1]["network_policy"] == {"mode": "off"}

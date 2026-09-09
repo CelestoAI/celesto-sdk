@@ -5,7 +5,7 @@ from collections.abc import Iterator, MutableMapping
 from typing import Any
 
 from .exceptions import CelestoValidationError
-from .types import ComputerTerminalSessionInfo
+from .types import ComputerTerminalSessionInfo, NetworkPolicy
 
 _DISK_RE = re.compile(r"^\s*(?P<amount>\d+(?:\.\d+)?)\s*(?P<unit>[a-zA-Z]*)\s*$")
 _DISK_UNITS_TO_MB = {
@@ -126,6 +126,7 @@ class Computer(MutableMapping[str, Any]):
         template_id: str | None = None,
         template_version: str | None = None,
         persistent_home: bool | None = None,
+        network_policy: NetworkPolicy | None = None,
         api_key: str | None = None,
         base_url: str | None = None,
         client: Any | None = None,
@@ -145,6 +146,9 @@ class Computer(MutableMapping[str, Any]):
             template_id=template_id,
             template_version=template_version,
             persistent_home=persistent_home,
+            **(
+                {"network_policy": network_policy} if network_policy is not None else {}
+            ),
         )
 
     @classmethod

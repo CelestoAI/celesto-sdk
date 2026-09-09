@@ -31,7 +31,12 @@ export interface ComputerPublishedPortInfo {
   createdAt?: string | null;
 }
 
+export interface NetworkPolicy {
+  mode: "open" | "off";
+}
+
 export interface ComputerInfo {
+  networkPolicy?: NetworkPolicy;
   id: string;
   name: string;
   status: ComputerStatus;
@@ -127,6 +132,8 @@ export interface SandboxTemplateInfo {
 }
 
 export interface CreateComputerParams {
+  /** Outbound internet access, fixed at creation. Defaults to open. */
+  networkPolicy?: NetworkPolicy;
   /** Number of virtual CPUs (1-16). Alias for vcpus. */
   cpus?: number;
   /** Number of virtual CPUs (1-16). */

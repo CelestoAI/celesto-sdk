@@ -598,3 +598,41 @@ def test_organizations_active_falls_back_to_id_when_lookup_fails():
     client = _client_with(session)
 
     assert client.organizations.active() == {"id": "org-1", "name": None}
+
+
+@pytest.mark.parametrize("mode", ["open", "off"])
+def test_computer_network_policy_reaches_api(mode):
+    session = DummySession(payload={"id": "cmp_1", "network_policy": {"mode": mode}})
+    client = _CelestoClient("test-key", base_url="https://api.example.test/v1")
+    client.session = session
+    computer = Computer(client=client, network_policy={"mode": mode})
+    assert session.calls[0]["json"]["network_policy"] == {"mode": mode}
+    assert computer.network_policy == {"mode": mode}
+
+
+@pytest.mark.parametrize(
+    "policy",
+    [
+        {"mode": "restricted"},
+        {"mode": "off", "allowed_domains": ["example.com"]},
+        "off",
+    ],
+)
+def test_invalid_network_policy_does_not_send_request(policy):
+    session = DummySession()
+    client = _CelestoClient("test-key", base_url="https://api.example.test/v1")
+    client.session = session
+    with pytest.raises(CelestoValidationError, match="network_policy"):
+        Computer(client=client, network_policy=policy)
+    assert not session.calls
+
+
+def test_offline_external_volume_does_not_send_request():
+    session = DummySession()
+    client = _CelestoClient("test-key", base_url="https://api.example.test/v1")
+    client.session = session
+    with pytest.raises(
+        CelestoValidationError, match="External volumes require internet"
+    ):
+        Computer(client=client, network_policy={"mode": "off"}, persistent_home=True)
+    assert not session.calls
