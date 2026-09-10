@@ -18,7 +18,7 @@ from .exceptions import (
     CelestoValidationError,
 )
 from .runtime.client import Agents, EndUsers, Runs, Sessions, Settings
-from .types import ComputerTerminalSessionInfo
+from .types import ComputerTerminalSessionInfo, NetworkPolicy
 
 __all__ = [
     "_BASE_URL",
@@ -629,6 +629,7 @@ class Computers(_BaseClient):
         template_id: str | None = None,
         template_version: str | None = None,
         persistent_home: bool | None = None,
+        network_policy: NetworkPolicy | None = None,
     ) -> dict[str, Any]:
         """Create a new sandboxed computer.
 
@@ -646,6 +647,8 @@ class Computers(_BaseClient):
             template_id: Sandbox template id, such as "scratch" or
                 "coding-agent". Use this when you want preinstalled tools.
             template_version: Optional immutable template version.
+            network_policy: {"mode": "open"} (default) or {"mode": "off"}.
+                Fixed after creation. Internet off requires persistent_home=False.
             persistent_home: Whether to keep ``/home/ohm`` across stop and
                 restore. Off by default and cannot be changed after create.
 
@@ -665,7 +668,23 @@ class Computers(_BaseClient):
         resolved_ram_mb = ram_mb if ram_mb is not None else memory
         resolved_disk_size_mb = resolve_disk_size_mb(disk, disk_size_mb)
 
+        if network_policy is not None:
+            if (
+                not isinstance(network_policy, dict)
+                or set(network_policy) != {"mode"}
+                or network_policy["mode"] not in ("open", "off")
+            ):
+                raise CelestoValidationError(
+                    'network_policy must be {"mode": "open"} or {"mode": "off"}.'
+                )
+            if network_policy["mode"] == "off" and persistent_home:
+                raise CelestoValidationError(
+                    "External volumes require internet access; set persistent_home=False."
+                )
+
         payload: dict[str, Any] = {}
+        if network_policy is not None:
+            payload["network_policy"] = dict(network_policy)
         if resolved_vcpus is not None:
             payload["vcpus"] = resolved_vcpus
         if resolved_ram_mb is not None:

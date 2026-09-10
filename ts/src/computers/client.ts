@@ -9,6 +9,7 @@ import {
   ComputerExecStreamEvent,
   ComputerInfo,
   ComputerListResponse,
+  NetworkPolicy,
   ComputerPublishedPortInfo,
   ComputerStatus,
   CreateComputerParams,
@@ -34,6 +35,7 @@ interface ComputerPublishedPortInfoWire {
 }
 
 interface ComputerInfoWire {
+  network_policy?: NetworkPolicy;
   id: string;
   name: string;
   status: ComputerStatus;
@@ -138,6 +140,7 @@ const toComputerInfo = (payload: ComputerInfoWire): ComputerInfo => ({
   templateId: payload.template_id,
   templateVersion: payload.template_version ?? null,
   persistentHome: payload.external_volume_enabled ?? false,
+  networkPolicy: payload.network_policy ?? { mode: "open" },
   connection: toConnection(payload.connection),
   publishedPorts: payload.published_ports?.map(toPublishedPortInfo),
   lastError: payload.last_error ?? null,
@@ -305,6 +308,16 @@ const buildCreateComputerBody = (params: CreateComputerParams): Record<string, u
   }
 
   const body: Record<string, unknown> = {};
+  if (params.networkPolicy !== undefined) {
+    const policy = params.networkPolicy;
+    if (!policy || Object.keys(policy).length !== 1 || !("mode" in policy) || !["open", "off"].includes(policy.mode)) {
+      throw new Error('networkPolicy must be {mode: "open"} or {mode: "off"}.');
+    }
+    if (policy.mode === "off" && params.persistentHome) {
+      throw new Error("External volumes require internet access; set persistentHome=false.");
+    }
+    body.network_policy = { mode: policy.mode };
+  }
   const vcpus = params.vcpus ?? params.cpus;
   const ramMb = params.ramMb ?? params.memory;
   const diskSizeMb = params.diskSizeMb ?? parsedDiskSizeMb;

@@ -455,6 +455,33 @@ computer = Computer(persistent_home=True)
 
 This setting cannot be changed later.
 
+### Control Internet Access
+
+Internet is on by default. Disable outbound connections when you create a
+computer:
+
+```python
+from celesto import Computer
+
+computer = Computer(network_policy={"mode": "off"})
+try:
+    print(computer.run("uname -a")["stdout"])
+finally:
+    computer.delete()
+```
+
+Commands and terminal sessions still work without internet access. The policy
+survives stop/start and snapshot restore, and it cannot be changed after
+creation. A persistent home uses an external volume, so do not combine
+`network_policy={"mode": "off"}` with `persistent_home=True`. Domain and IP
+allowlists are not supported.
+
+From the CLI, pass the same choice at creation time:
+
+```bash
+celesto computer create --no-internet
+```
+
 ### Templates
 
 By default, Celesto uses `scratch`, a minimal Ubuntu computer. Use a template
@@ -582,7 +609,7 @@ computer.unpublish_port(8000)
 | `celesto auth login` | Save your API key for CLI commands |
 | `celesto auth status` | Check whether an API key is saved |
 | `celesto auth logout` | Remove your saved API key |
-| `celesto computer create [--cpus N] [--memory MB] [--disk-size-mb MB] [--template ID] [--persistent-home]` | Create a computer |
+| `celesto computer create [--cpus N] [--memory MB] [--disk-size-mb MB] [--template ID] [--persistent-home] [--no-internet]` | Create a computer |
 | `celesto computer templates` | List templates with preinstalled tools |
 | `celesto computer list` | List your computers |
 | `celesto computer list [--status STATUS] [--template ID] [--project ID] [--limit N]` | List matching computers |
@@ -676,6 +703,10 @@ If your agent needs common coding tools preinstalled, pass
 `options=CelestoSandboxClientOptions(template_id="coding-agent")` when you call
 `client.create()`. Import `CelestoSandboxClientOptions` from
 `celesto.integrations.openai_agents`.
+
+To create the hosted computer without internet access, pass
+`network_policy={"mode": "off"}` in `CelestoSandboxClientOptions`. If you reuse
+an existing computer by ID, its policy must match the requested policy.
 
 For local sandbox runs, use `SmolVMSandboxClient` and
 `SmolVMSandboxClientOptions` from `celesto.integrations.openai_agents`. SmolVM

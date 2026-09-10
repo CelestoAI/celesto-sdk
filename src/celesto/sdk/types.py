@@ -153,9 +153,16 @@ class ComputerPublishedPortInfo(TypedDict):
     created_at: NotRequired[str | None]
 
 
+class NetworkPolicy(TypedDict):
+    """Outbound internet access; fixed when the computer is created."""
+
+    mode: Literal["open", "off"]
+
+
 class ComputerInfo(TypedDict):
     """Information about a computer."""
 
+    network_policy: NotRequired[NetworkPolicy]
     id: str
     name: str
     status: ComputerStatus
@@ -253,6 +260,7 @@ __all__ = [
     "PublishedPortStatus",
     "ComputerPublishedPortInfo",
     "ComputerInfo",
+    "NetworkPolicy",
     "SandboxTemplateInfo",
     "ComputerListResponse",
     "ComputerExecResponse",

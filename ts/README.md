@@ -244,6 +244,28 @@ const computer = await Computer.create({ persistentHome: true });
 
 This setting cannot be changed later.
 
+### Control Internet Access
+
+Internet is on by default. Disable outbound connections when you create a
+computer:
+
+```js
+import { Computer } from "@celestoai/sdk";
+
+const computer = await Computer.create({ networkPolicy: { mode: "off" } });
+try {
+  console.log((await computer.run("uname -a")).stdout);
+} finally {
+  await computer.delete();
+}
+```
+
+Commands and terminal sessions still work without internet access. The policy
+survives stop/start and snapshot restore, and it cannot be changed after
+creation. A persistent home uses an external volume, so do not combine
+`networkPolicy: { mode: "off" }` with `persistentHome: true`. Domain and IP
+allowlists are not supported.
+
 ### Templates
 
 Use a template when you want a computer that already has extra tools installed.
