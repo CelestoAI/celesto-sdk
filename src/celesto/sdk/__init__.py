@@ -54,12 +54,14 @@ from .types import (
     DeploymentResponse,
     DriveFile,
     DriveFilesResponse,
+    NetworkPolicy,
     SandboxTemplateInfo,
 )
 
 __all__ = [
     # Main resource classes
     "Computer",
+    "NetworkPolicy",
     "ManagedAgentsClient",
     # Managed agents
     "ALLOWED_CONFIG_KEYS",

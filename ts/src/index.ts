@@ -22,6 +22,7 @@ export type {
   ComputerExecResponse,
   ComputerExecStreamEvent,
   ComputerInfo,
+  NetworkPolicy,
   ComputerListResponse,
   ComputerPublishedPortInfo,
   ComputerStatus,

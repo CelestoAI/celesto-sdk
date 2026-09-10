@@ -746,3 +746,22 @@ uv run ruff format .
 ## License
 
 Apache License 2.0
+
+### Internet access
+
+Internet is on by default. Disable outbound connections when creating a computer:
+
+```python
+from celesto import Computer
+
+computer = Computer(network_policy={"mode": "off"})
+print(computer.run("uname -a"))
+computer.delete()
+```
+
+Commands and terminals remain available. The setting survives stop/start and
+snapshot restore and cannot be changed after creation. External volumes require
+internet access. Domain and IP allowlists are not supported yet.
+
+From the CLI, use `celesto computer create --no-internet`.
+In TypeScript, use `await Computer.create({ networkPolicy: { mode: "off" } })`.

@@ -4,6 +4,7 @@ import { describe, it } from "node:test";
 import * as sdk from "../src/index";
 import { Computer } from "../src/computers/computer";
 import { ComputersClient } from "../src/computers/client";
+import type { CreateComputerParams } from "../src/computers/types";
 import type { ClientConfig } from "../src/core/config";
 import { CelestoApiError, CelestoError, CelestoNetworkError } from "../src/core/errors";
 
@@ -125,9 +126,10 @@ describe("ComputersClient", () => {
     }));
     const client = new ComputersClient(makeConfig(fetch));
 
-    await client.create();
+    const result = await client.create();
 
     assert.deepEqual(calls[0]!.body, {});
+    assert.deepEqual(result.networkPolicy, { mode: "open" });
   });
 
   it("create() can explicitly disable a persistent home", async () => {
@@ -907,5 +909,60 @@ describe("ComputersClient", () => {
 
     assert.equal(calls[0]!.url, "https://api.example.test/v1/computers/cmp_1/terminals");
     assert.equal(connection.url, "wss://gateway.example/connect?region=us&token=token");
+  });
+});
+
+describe("internet policy", () => {
+  it("allows an explicit open policy with a persistent home", async () => {
+    const { fetch, calls } = makeFetchMock(() => ({
+      status: 201,
+      body: { id: "cmp_open", network_policy: { mode: "open" } },
+    }));
+    const client = new ComputersClient(makeConfig(fetch));
+
+    const info = await client.create({
+      networkPolicy: { mode: "open" },
+      persistentHome: true,
+    });
+
+    assert.deepEqual(calls[0]!.body, {
+      network_policy: { mode: "open" },
+      external_volume_enabled: true,
+    });
+    assert.deepEqual(info.networkPolicy, { mode: "open" });
+  });
+
+  it("sends the off policy and reads it from the response", async () => {
+    const { fetch, calls } = makeFetchMock(() => ({ status: 201, body: { id: "cmp_off", network_policy: { mode: "off" } } }));
+    const client = new ComputersClient(makeConfig(fetch));
+    const info = await client.create({ networkPolicy: { mode: "off" } });
+    assert.deepEqual(calls[0]!.body, { network_policy: { mode: "off" } });
+    assert.deepEqual(info.networkPolicy, { mode: "off" });
+  });
+  it("rejects an external volume with internet off before sending", async () => {
+    const { fetch, calls } = makeFetchMock(() => ({ status: 201, body: {} }));
+    const client = new ComputersClient(makeConfig(fetch));
+    await assert.rejects(client.create({ networkPolicy: { mode: "off" }, persistentHome: true }), /External volumes require internet/);
+    assert.equal(calls.length, 0);
+  });
+
+  it("rejects malformed policies before sending", async () => {
+    const invalidPolicies: unknown[] = [
+      null,
+      { mode: "restricted" },
+      { mode: "off", allowedDomains: ["example.com"] },
+      { policy: "off" },
+    ];
+
+    for (const networkPolicy of invalidPolicies) {
+      const { fetch, calls } = makeFetchMock(() => ({ status: 201, body: {} }));
+      const client = new ComputersClient(makeConfig(fetch));
+
+      await assert.rejects(
+        client.create({ networkPolicy } as CreateComputerParams),
+        /networkPolicy/,
+      );
+      assert.equal(calls.length, 0);
+    }
   });
 });

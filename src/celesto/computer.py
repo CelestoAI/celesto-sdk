@@ -340,6 +340,13 @@ def create_computer(
         Optional[str],
         typer.Option("--image", help="Legacy image selector"),
     ] = None,
+    internet: Annotated[
+        bool,
+        typer.Option(
+            "--internet/--no-internet",
+            help="Allow outbound internet access; fixed at creation.",
+        ),
+    ] = True,
     persistent_home: Annotated[
         bool,
         typer.Option(
@@ -362,6 +369,7 @@ def create_computer(
             template_version=template_version,
             image=image,
             persistent_home=persistent_home,
+            **({"network_policy": {"mode": "off"}} if not internet else {}),
         )
 
     if as_json:

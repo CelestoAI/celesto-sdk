@@ -25,6 +25,7 @@ from celesto.integrations.openai_agents.common import (
     timeout_seconds,
 )
 from celesto.sdk.client import _CelestoClient
+from celesto.sdk.types import NetworkPolicy
 
 
 class CelestoSandboxClientOptions(BaseSandboxClientOptions):
@@ -39,6 +40,7 @@ class CelestoSandboxClientOptions(BaseSandboxClientOptions):
     template_id: str | None = None
     template_version: str | None = None
     persistent_home: bool | None = None
+    network_policy: NetworkPolicy | None = None
     start_timeout_seconds: float = 120
     start_poll_interval_seconds: float = 2
     delete_on_close: bool | None = None
@@ -56,6 +58,7 @@ class CelestoSandboxSessionState(SandboxSessionState):
     template_id: str | None = None
     template_version: str | None = None
     persistent_home: bool | None = None
+    network_policy: NetworkPolicy | None = None
     start_timeout_seconds: float = 120
     start_poll_interval_seconds: float = 2
     delete_on_close: bool = True
@@ -129,6 +132,7 @@ class CelestoSandboxSession(CommandBackedSession):
                 template_id=self.state.template_id,
                 template_version=self.state.template_version,
                 persistent_home=self.state.persistent_home,
+                network_policy=self.state.network_policy,
             )
             self.state.computer_id = created["id"]
             if created.get("status") != "running":
@@ -138,6 +142,16 @@ class CelestoSandboxSession(CommandBackedSession):
         info = await asyncio.to_thread(
             self._client.computers.get, self.state.computer_id
         )
+        if (
+            self.state.network_policy is not None
+            and info.get("network_policy") != self.state.network_policy
+        ):
+            raise RuntimeError(
+                f"Computer {self.state.computer_id} does not match the requested "
+                "network_policy. Inspect it with "
+                f"Computer.get('{self.state.computer_id}'), or omit computer_id "
+                "to create a matching computer."
+            )
         if info.get("status") == "stopped":
             await asyncio.to_thread(
                 self._client.computers.start, self.state.computer_id
@@ -223,6 +237,7 @@ class CelestoSandboxClient(BaseSandboxClient[CelestoSandboxClientOptions | None]
             template_id=resolved.template_id,
             template_version=resolved.template_version,
             persistent_home=resolved.persistent_home,
+            network_policy=resolved.network_policy,
             start_timeout_seconds=resolved.start_timeout_seconds,
             start_poll_interval_seconds=resolved.start_poll_interval_seconds,
             delete_on_close=delete_on_close,

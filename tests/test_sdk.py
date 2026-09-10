@@ -12,6 +12,7 @@ class DummySession:
         self.status_code = status_code
         self.payload = payload if payload is not None else {}
         self.calls = []
+        self.closed = False
         self.timeout = httpx.Timeout(connect=10, read=120, write=10, pool=10)
 
     def request(self, method, url, **kwargs):
@@ -23,7 +24,7 @@ class DummySession:
         )
 
     def close(self):
-        pass
+        self.closed = True
 
 
 def test_top_level_sdk_exports_new_computer_api_only():
@@ -598,3 +599,60 @@ def test_organizations_active_falls_back_to_id_when_lookup_fails():
     client = _client_with(session)
 
     assert client.organizations.active() == {"id": "org-1", "name": None}
+
+
+@pytest.mark.parametrize("mode", ["open", "off"])
+def test_computer_network_policy_reaches_api(mode):
+    session = DummySession(payload={"id": "cmp_1", "network_policy": {"mode": mode}})
+    client = _CelestoClient("test-key", base_url="https://api.example.test/v1")
+    client.session = session
+    computer = Computer(client=client, network_policy={"mode": mode})
+    assert session.calls[0]["json"]["network_policy"] == {"mode": mode}
+    assert computer.network_policy == {"mode": mode}
+
+
+@pytest.mark.parametrize(
+    "policy",
+    [
+        {"mode": "restricted"},
+        {"mode": "off", "allowed_domains": ["example.com"]},
+        "off",
+    ],
+)
+def test_invalid_network_policy_does_not_send_request(policy):
+    session = DummySession()
+    client = _CelestoClient("test-key", base_url="https://api.example.test/v1")
+    client.session = session
+    with pytest.raises(CelestoValidationError, match="network_policy"):
+        Computer(client=client, network_policy=policy)
+    assert not session.calls
+    assert not session.closed
+
+
+def test_offline_external_volume_does_not_send_request():
+    session = DummySession()
+    client = _CelestoClient("test-key", base_url="https://api.example.test/v1")
+    client.session = session
+    with pytest.raises(
+        CelestoValidationError, match="External volumes require internet"
+    ):
+        Computer(client=client, network_policy={"mode": "off"}, persistent_home=True)
+    assert not session.calls
+
+
+def test_computer_closes_owned_client_when_creation_fails(monkeypatch):
+    import celesto.sdk.computer as computer_module
+
+    session = DummySession()
+    client = _CelestoClient("test-key", base_url="https://api.example.test/v1")
+    client.session = session
+    monkeypatch.setattr(
+        computer_module,
+        "_make_client",
+        lambda **kwargs: (client, True),
+    )
+
+    with pytest.raises(CelestoValidationError, match="network_policy"):
+        Computer(network_policy={"mode": "restricted"})
+
+    assert session.closed
