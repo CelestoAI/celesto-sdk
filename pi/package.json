@@ -46,7 +46,7 @@
     "typebox": "*"
   },
   "devDependencies": {
-    "@celestoai/sdk": "^0.1.4",
+    "@celestoai/sdk": "^0.1.5",
     "@earendil-works/pi-agent-core": "0.80.6",
     "@earendil-works/pi-ai": "0.80.6",
     "@earendil-works/pi-coding-agent": "0.80.6",
