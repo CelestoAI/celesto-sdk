@@ -1,6 +1,6 @@
 {
   "name": "@celestoai/sdk",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Celesto SDK \u2014 managed agents, Gatekeeper, and Computers clients for Node.js",
   "license": "Apache-2.0",
   "repository": {
